@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <WiFi.h>
+#include <PubSubClient.h>
 #include <WebServer.h>
 #include <DNSServer.h>
 #include <Preferences.h>
@@ -34,5 +35,8 @@ extern volatile bool          isAcSupported;
 
 extern char deviceCode[5];
 extern char apSsid[32];
+
+extern WiFiClient wifiClient;
+extern PubSubClient mqttClient;
 
 #endif // AIRCON_APP_STATE_H

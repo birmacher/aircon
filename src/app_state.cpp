@@ -17,3 +17,6 @@ volatile bool          isAcSupported    = false;
 
 char deviceCode[5];
 char apSsid[32];
+
+WiFiClient wifiClient;
+PubSubClient mqttClient(wifiClient);

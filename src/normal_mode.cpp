@@ -1,31 +1,63 @@
 #include "normal_mode.h"
+#include "mqtt_handler.h"
 
 static IRac* acController = nullptr;
 static String acMode = "standard";
 static unsigned long lastSensorUpdate = 0;
 static const unsigned long SENSOR_UPDATE_INTERVAL = 10000;
 
+AcState acState;
+
+void sendACCommand() {
+    if (!acController) return;
+    stdAc::state_t cmd = {};
+    cmd.protocol  = detectedProtocol;
+    cmd.model     = -1;
+    cmd.power     = acState.power;
+    cmd.mode      = acState.mode;
+    cmd.degrees   = acState.temp;
+    cmd.celsius   = true;
+    cmd.fanspeed  = stdAc::fanspeed_t::kAuto;
+    cmd.swingv    = stdAc::swingv_t::kOff;
+    cmd.swingh    = stdAc::swingh_t::kOff;
+    cmd.quiet     = false;
+    cmd.turbo     = false;
+    cmd.econo     = false;
+    cmd.light     = false;
+    cmd.filter    = false;
+    cmd.clean     = false;
+    cmd.beep      = false;
+    cmd.sleep     = -1;
+    cmd.clock     = -1;
+    bool ok = acController->sendAc(cmd);
+    Serial.printf("IR TX: power=%s mode=%d temp=%.1f ok=%d\n",
+                  acState.power ? "on" : "off", (int)acState.mode, acState.temp, ok);
+}
+
 void enterNormalMode() {
     state = STATE_NORMAL;
     Serial.println("Entering NORMAL mode");
 
-    decode_type_t proto = (decode_type_t)prefs.getUChar("proto", (uint8_t)decode_type_t::UNKNOWN);
-    uint16_t      bits  = prefs.getUShort("bits", 0);
-    acMode              = prefs.getString("mode", "standard");
+    detectedProtocol = (decode_type_t)prefs.getUChar("proto", (uint8_t)decode_type_t::UNKNOWN);
+    detectedBits     = prefs.getUShort("bits", 0);
+    acMode           = prefs.getString("mode", "standard");
 
     Serial.printf("AC protocol: %s, bits: %u, mode: %s\n",
-                  typeToString(proto).c_str(), bits, acMode.c_str());
+                  typeToString(detectedProtocol).c_str(), detectedBits, acMode.c_str());
 
     acController = new IRac(IR_SEND_PIN);
 
     sht31.begin(SHT31_I2C_ADDR);
+    irrecv.disableIRIn();
 
-    irrecv.enableIRIn();
+    mqttSetup();
 
     displayStatus("Ready", WiFi.localIP().toString());
 }
 
 void normalLoop() {
+    mqttLoop();
+
     if (millis() - lastSensorUpdate > SENSOR_UPDATE_INTERVAL) {
         lastSensorUpdate = millis();
         float t = sht31.readTemperature();
@@ -34,10 +66,7 @@ void normalLoop() {
             char line[24];
             snprintf(line, sizeof(line), "%.1fC %.0f%%", t, h);
             displayStatus("Ready", line);
-
-            // TODO: publishTelemetry(t, h);
+            publishTelemetry(t, h);
         }
     }
-
-    // TODO: MQTT subscribe, thermostat logic, HTTP REST API, HA autodiscovery
 }

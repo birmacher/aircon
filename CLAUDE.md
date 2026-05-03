@@ -21,8 +21,9 @@ src/
 ├── display.h/.cpp    # displayStatus(), displayBig()
 ├── wifi_manager.h/.cpp
 ├── setup_portal.h/.cpp  # captive portal HTML + HTTP handlers (static) + enterSetupMode()
-├── normal_mode.h/.cpp   # enterNormalMode(), normalLoop()
-├── ir_handler.h/.cpp    # processIR() — dispatches to setup (learn) or normal (detect)
+├── normal_mode.h/.cpp   # enterNormalMode(), normalLoop(), sendACCommand(); AcState struct
+├── mqtt_handler.h/.cpp  # mqttSetup/Loop, publishState/Telemetry, HA discovery + command sub
+├── ir_handler.h/.cpp    # processIR() — setup mode only (learn); called only in STATE_SETUP
 └── button_handler.h/.cpp # handleResetButton(); factoryReset() is static (not exported)
 ```
 
@@ -30,18 +31,20 @@ State machine: `STATE_BOOT → STATE_SETUP | STATE_NORMAL`
 
 ## Key Constraints
 
-- **NVS namespace:** `"acconfig"` — keys: `ssid`, `pass`, `proto`, `bits`, `mode`, `provisioned`, `force_setup`
+- **NVS namespace:** `"acconfig"` — keys: `ssid`, `pass`, `proto`, `bits`, `mode`, `provisioned`, `force_setup`, `mqtt_host`, `mqtt_port`, `mqtt_id`
 - `volatile` on `detectedProtocol`, `detectedBits`, `isAcSupported` — do not remove
 - Button state vars are `static` in `button_handler.cpp` — not in `app_state`
 - `acController`, `acMode`, `lastSensorUpdate` are `static` in `normal_mode.cpp`
+- `acState` (AcState) is a non-static global in `normal_mode.cpp`, shared with `mqtt_handler.cpp`
+- IR receiver active **only in STATE_SETUP**; `irrecv.disableIRIn()` called on entering normal mode
 
-## Benchmarks (Phase A baseline)
+## Benchmarks
 
 | Metric | Value |
 |---|---|
-| Flash | 76.6% (1,003,970 / 1,310,720 bytes) |
-| RAM | 12.4% (40,612 / 327,680 bytes) |
-| Clean build time | ~52s |
+| Flash | 81.7% (1,071,400 / 1,310,720 bytes) |
+| RAM | 12.7% (41,500 / 327,680 bytes) |
+| Clean build time | ~26s |
 
 ## Docs
 

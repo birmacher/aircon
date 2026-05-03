@@ -61,10 +61,10 @@ void setup() {
 
 void loop() {
     handleResetButton();
-    processIR();
-    
+
     switch (state) {
         case STATE_SETUP:
+            processIR();
             dnsServer.processNextRequest();
             server.handleClient();
             break;
