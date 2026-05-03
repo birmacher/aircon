@@ -31,10 +31,10 @@ State machine: `STATE_BOOT → STATE_SETUP | STATE_NORMAL`
 
 ## Key Constraints
 
-- **NVS namespace:** `"acconfig"` — keys: `ssid`, `pass`, `proto`, `bits`, `mode`, `provisioned`, `force_setup`, `mqtt_host`, `mqtt_port`, `mqtt_id`
+- **NVS namespace:** `"acconfig"` — keys: `ssid`, `pass`, `proto`, `bits`, `provisioned`, `force_setup`, `mqtt_host`, `mqtt_port`, `mqtt_id`
 - `volatile` on `detectedProtocol`, `detectedBits`, `isAcSupported` — do not remove
 - Button state vars are `static` in `button_handler.cpp` — not in `app_state`
-- `acController`, `acMode`, `lastSensorUpdate` are `static` in `normal_mode.cpp`
+- `acController`, `lastSensorUpdate` are `static` in `normal_mode.cpp`
 - `acState` (AcState) is a non-static global in `normal_mode.cpp`, shared with `mqtt_handler.cpp`
 - IR receiver active **only in STATE_SETUP**; `irrecv.disableIRIn()` called on entering normal mode
 

@@ -1,8 +1,8 @@
 #include "normal_mode.h"
 #include "mqtt_handler.h"
+#include "setup_portal.h"
 
 static IRac* acController = nullptr;
-static String acMode = "standard";
 static unsigned long lastSensorUpdate = 0;
 static const unsigned long SENSOR_UPDATE_INTERVAL = 10000;
 
@@ -40,10 +40,15 @@ void enterNormalMode() {
 
     detectedProtocol = (decode_type_t)prefs.getUChar("proto", (uint8_t)decode_type_t::UNKNOWN);
     detectedBits     = prefs.getUShort("bits", 0);
-    acMode           = prefs.getString("mode", "standard");
 
-    Serial.printf("AC protocol: %s, bits: %u, mode: %s\n",
-                  typeToString(detectedProtocol).c_str(), detectedBits, acMode.c_str());
+    Serial.printf("AC protocol: %s, bits: %u\n",
+                  typeToString(detectedProtocol).c_str(), detectedBits);
+
+    if (detectedProtocol == decode_type_t::UNKNOWN || !IRac::isProtocolSupported(detectedProtocol)) {
+        Serial.println("Invalid AC protocol in NVS, forcing setup");
+        enterSetupMode(false);
+        return;
+    }
 
     acController = new IRac(IR_SEND_PIN);
 
@@ -62,11 +67,19 @@ void normalLoop() {
         lastSensorUpdate = millis();
         float t = sht31.readTemperature();
         float h = sht31.readHumidity();
+        if (isnan(t) || isnan(h)) {
+            delay(20);
+            t = sht31.readTemperature();
+            h = sht31.readHumidity();
+        }
         if (!isnan(t) && !isnan(h)) {
             char line[24];
             snprintf(line, sizeof(line), "%.1fC %.0f%%", t, h);
             displayStatus("Ready", line);
             publishTelemetry(t, h);
+        } else {
+            Serial.println("SHT31 read error");
+            displayStatus("Ready", "Sensor error");
         }
     }
 }

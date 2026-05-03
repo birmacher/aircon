@@ -31,19 +31,13 @@ button:disabled{background:#aaa;cursor:not-allowed}
 <button onclick='startLearn()'>Start Listening</button>
 <div id='status'>Idle — press the button above</div>
 
-<h2>3. Mode</h2>
-<select id='mode'>
-  <option value='standard'>Standard (AC's own thermostat)</option>
-  <option value='thermostat'>Thermostat (use built-in sensor)</option>
-</select>
-
-<h2>4. MQTT Broker <span style='font-weight:normal;font-size:.85em;color:#666'>(optional)</span></h2>
+<h2>3. MQTT Broker <span style='font-weight:normal;font-size:.85em;color:#666'>(optional)</span></h2>
 <input id='mqtt_host' placeholder='Broker IP (e.g. 192.168.1.100)'>
 <input id='mqtt_port' type='number' value='1883' placeholder='Port'>
 <input id='mqtt_id' value='aircon' placeholder='Client ID / topic prefix'>
 <p class='note'>Leave broker IP empty to disable MQTT / Home Assistant integration.</p>
 
-<h2>5. Save</h2>
+<h2>4. Save</h2>
 <button id='finishBtn' onclick='finish()' disabled>Save & Connect</button>
 
 <script>
@@ -81,7 +75,6 @@ function checkIR(){
 function finish(){
   const ssid = document.getElementById('ssid').value.trim();
   const pass = document.getElementById('pass').value;
-  const mode = document.getElementById('mode').value;
   const mqtt_host = document.getElementById('mqtt_host').value.trim();
   const mqtt_port = parseInt(document.getElementById('mqtt_port').value) || 1883;
   const mqtt_id = document.getElementById('mqtt_id').value.trim() || 'aircon';
@@ -91,7 +84,7 @@ function finish(){
   fetch('/api/finish', {
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({ssid, pass, mode, mqtt_host, mqtt_port, mqtt_id})
+    body:JSON.stringify({ssid, pass, mqtt_host, mqtt_port, mqtt_id})
   }).then(r=>r.json()).then(d=>{
     if(d.ok) setStatus('Saved! Device rebooting and connecting...', 'ok');
     else setStatus('Error: '+d.error, 'bad');
@@ -142,27 +135,31 @@ static void handleFinish() {
         return;
     }
 
-    String ssid      = doc["ssid"]      | "";
-    String pass      = doc["pass"]      | "";
-    String mode      = doc["mode"]      | "standard";
-    String mqttHost  = doc["mqtt_host"] | "";
-    int    mqttPort  = doc["mqtt_port"] | 1883;
-    String mqttId    = doc["mqtt_id"]   | "aircon";
+    String ssid     = doc["ssid"]      | "";
+    String pass     = doc["pass"]      | "";
+    String mqttHost = doc["mqtt_host"] | "";
+    int    mqttPort = doc["mqtt_port"] | 1883;
+    String mqttId   = doc["mqtt_id"]   | "aircon";
 
     if (ssid.length() == 0 || detectedProtocol == decode_type_t::UNKNOWN || !isAcSupported) {
         server.send(400, "application/json", "{\"ok\":false,\"error\":\"missing data\"}");
         return;
     }
 
-    prefs.putString ("ssid",       ssid);
-    prefs.putString ("pass",       pass);
-    prefs.putUChar  ("proto",      (uint8_t)detectedProtocol);
-    prefs.putUShort ("bits",       detectedBits);
-    prefs.putString ("mode",       mode);
-    prefs.putString ("mqtt_host",  mqttHost);
-    prefs.putUShort ("mqtt_port",  (uint16_t)constrain(mqttPort, 1, 65535));
-    prefs.putString ("mqtt_id",    mqttId.length() > 0 ? mqttId : "aircon");
-    prefs.putBool   ("provisioned", true);
+    bool nvsOk = true;
+    nvsOk &= prefs.putString("ssid",       ssid)                              > 0;
+    nvsOk &= prefs.putString("pass",       pass)                              > 0;
+    nvsOk &= prefs.putUChar ("proto",      (uint8_t)detectedProtocol);
+    nvsOk &= prefs.putUShort("bits",       detectedBits);
+    nvsOk &= prefs.putString("mqtt_host",  mqttHost)                          > 0;
+    nvsOk &= prefs.putUShort("mqtt_port",  (uint16_t)constrain(mqttPort, 1, 65535));
+    nvsOk &= prefs.putString("mqtt_id",    mqttId.length() > 0 ? mqttId : "aircon") > 0;
+    nvsOk &= prefs.putBool  ("provisioned", true);
+
+    if (!nvsOk) {
+        server.send(500, "application/json", "{\"ok\":false,\"error\":\"storage error\"}");
+        return;
+    }
 
     server.send(200, "application/json", "{\"ok\":true}");
     delay(1500);

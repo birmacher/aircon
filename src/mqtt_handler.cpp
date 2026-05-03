@@ -148,7 +148,6 @@ void mqttLoop() {
             lastReconnect = now;
             mqttConnect();
         }
-    } else {
-        mqttClient.loop();
     }
+    mqttClient.loop();
 }

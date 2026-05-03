@@ -1,6 +1,7 @@
 #include "display.h"
 
 void displayStatus(const String& line1, const String& line2) {
+    if (!displayReady) return;
     display.clearDisplay();
     display.setTextColor(SSD1306_WHITE);
     display.setTextSize(2);
@@ -15,6 +16,7 @@ void displayStatus(const String& line1, const String& line2) {
 }
 
 void displayBig(const String& msg) {
+    if (!displayReady) return;
     display.clearDisplay();
     display.setTextColor(SSD1306_WHITE);
     display.setTextSize(3);

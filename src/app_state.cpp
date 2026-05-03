@@ -15,6 +15,8 @@ volatile decode_type_t detectedProtocol = decode_type_t::UNKNOWN;
 volatile uint16_t      detectedBits     = 0;
 volatile bool          isAcSupported    = false;
 
+bool displayReady = false;
+
 char deviceCode[5];
 char apSsid[32];
 

@@ -16,7 +16,8 @@ void setup() {
     
     // Display init
     Wire.begin(I2C_SDA, I2C_SCL);
-    if (display.begin(SSD1306_SWITCHCAPVCC, OLED_I2C_ADDR)) {
+    displayReady = display.begin(SSD1306_SWITCHCAPVCC, OLED_I2C_ADDR);
+    if (displayReady) {
         displayStatus("Boot", "");
     } else {
         Serial.println("Display init failed");

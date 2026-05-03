@@ -25,12 +25,12 @@ WiFi may run only at commissioning or for OTA, not as the main control path.
 Get the prototype working end-to-end before changing anything physical.
 
 - [x] IR learn + decode on GPIO0 (IRremoteESP8266)
-- [ ] IR transmit on GPIO6, range > 3 m measured
+- [x] IR transmit on GPIO6, range > 3 m measured
 - [x] SHT30 reads on I²C
 - [x] OLED renders status
 - [x] Buttons handled with debounce
 - [x] Learned AC code persisted in NVS
-- [ ] Minimal HA integration (WiFi + MQTT is fine here — throwaway)
+- [x] Minimal HA integration (WiFi + MQTT is fine here — throwaway)
 
 **Done when:** a HA command turns the AC on/off and changes its state.
 

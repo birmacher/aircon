@@ -1,7 +1,7 @@
 # Hardware
 
 ESP32-C3 SuperMini-based IR remote with 3 buttons, an OLED display, and an
-SHT30 temperature/humidity sensor. The board listens for incoming IR codes during installation
+SHT31 temperature/humidity sensor. The board listens for incoming IR codes during installation
 on GPIO0 and detect and stores the AC protocal.
 After setup it uses two IR LEDs driven by an NPN transistor on GPIO6 for communication with the ACs.
 
@@ -10,13 +10,13 @@ After setup it uses two IR LEDs driven by an NPN transistor on GPIO6 for communi
 | Ref     | Qty | Part                       | Notes                              |
 |---------|----:|----------------------------|------------------------------------|
 | U1      |   1 | ESP32-C3 SuperMini         | MCU board, 3V3 logic               |
-| U2      |   1 | SHT30-M                    | I²C temp/humidity sensor           |
+| U2      |   1 | SHT31                      | I²C temp/humidity sensor           |
 | DS1     |   1 | 0.96" OLED 128×64 (SSD1306)| I²C, model D096-12864-I2C-GV-WH    |
 | Q1      |   1 | 2N2222A                    | NPN, low-side IR-LED driver        |
 | D1, D2  |   2 | IRE940-5                   | IR LED, 940 nm                     |
-| D3      |   1 | LED 5 mm red               | Status LED                         |
+| D3      |   1 | LED 5 mm red               | Status LED (not yet implemented in firmware) |
 | U3      |   1 | JS-1838B (VS1838B)         | IR receiver, 38 kHz                |
-| SW1–SW3 |   3 | TACTR-12×12×7.5            | Tactile button                     |
+| SW1–SW3 |   3 | TACTR-12×12×7.5            | Tactile button (SW2/SW3 not yet implemented) |
 | R1, R2  |   2 | 1 kΩ ±5%                   | In parallel → ≈500 Ω base resistor |
 | R3, R4  |   2 | 27 Ω ±5%                   | IR LED current limit (one per LED) |
 | R5      |   1 | 220 Ω ±10%                 | Status LED current limit           |
@@ -85,7 +85,7 @@ flowchart LR
     Q1 -- C --- D2 --- R4 --- V3
     G6 --- R5 --- D3 --- GND
 
-    U2[U2 SHT30-M]:::comp
+    U2[U2 SHT31]:::comp
     DS1[DS1 OLED]:::comp
     G8 -- SDA --- U2
     G8 -- SDA --- DS1
@@ -99,7 +99,7 @@ flowchart LR
 
 ## Notes
 
-- **I²C pull-ups.** Both the SHT30-M and the OLED breakout boards include
+- **I²C pull-ups.** Both the SHT31 and the OLED breakout boards include
   built-in pull-ups on SDA/SCL. With both connected, the effective pull-up
   is the parallel combination — fine for 100 kHz and 400 kHz operation.
   No external resistors needed.
@@ -108,7 +108,9 @@ flowchart LR
   that pulls GPIO9 low at startup.
 - **Status LED tracks IR transmission.** R5 + D3 hang off the same GPIO6
   that drives the transistor base, so the red LED flickers visibly on
-  every IR burst.
+  every IR burst. No separate firmware control is needed or implemented for D3.
+- **BTN2 (GPIO4) and BTN3 (GPIO3)** are wired to the MCU and defined in `hw_config.h`
+  but have no firmware function yet. Reserved for Phase B/C features.
 - **IR LED current.** With V_LED ≈ 1.4 V, V_CE(sat) ≈ 0.2 V, and 27 Ω in
   series, peak current per LED is ≈ 63 mA. IR remote protocols pulse at
   ~33% duty over short bursts, keeping the average well within the LED's
