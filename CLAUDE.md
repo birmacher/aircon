@@ -30,7 +30,6 @@ State machine: `STATE_BOOT → STATE_SETUP | STATE_NORMAL`
 
 ## Key Constraints
 
-- **Pin mismatch:** `hw_config.h` uses GPIO4/5/9/10 — `docs/hardware.md` specifies GPIO0/6/8/9. Resolve before Phase B.
 - **NVS namespace:** `"acconfig"` — keys: `ssid`, `pass`, `proto`, `bits`, `mode`, `provisioned`, `force_setup`
 - `volatile` on `detectedProtocol`, `detectedBits`, `isAcSupported` — do not remove
 - Button state vars are `static` in `button_handler.cpp` — not in `app_state`
