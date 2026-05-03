@@ -34,6 +34,7 @@ extern volatile uint16_t      detectedBits;
 extern volatile bool          isAcSupported;
 
 extern bool displayReady;
+extern bool irEnabled;
 
 extern char deviceCode[5];
 extern char apSsid[32];

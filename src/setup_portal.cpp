@@ -200,6 +200,7 @@ void enterSetupMode(bool clearCreds) {
     server.begin();
 
     irrecv.enableIRIn();
+    irEnabled = true;
 
     displayStatus("Setup", String("Code:") + deviceCode);
 }

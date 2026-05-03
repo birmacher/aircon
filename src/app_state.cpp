@@ -16,6 +16,7 @@ volatile uint16_t      detectedBits     = 0;
 volatile bool          isAcSupported    = false;
 
 bool displayReady = false;
+bool irEnabled    = false;
 
 char deviceCode[5];
 char apSsid[32];

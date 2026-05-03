@@ -9,6 +9,7 @@ bool tryConnectSavedWifi() {
     displayStatus("WiFi", ssid);
 
     WiFi.mode(WIFI_STA);
+    WiFi.setTxPower(WIFI_POWER_8_5dBm);  // C3 SuperMini PSU can't drive default TX power
     WiFi.begin(ssid.c_str(), pass.c_str());
 
     unsigned long start = millis();

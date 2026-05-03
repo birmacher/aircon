@@ -53,7 +53,10 @@ void enterNormalMode() {
     acController = new IRac(IR_SEND_PIN);
 
     sht31.begin(SHT31_I2C_ADDR);
-    irrecv.disableIRIn();
+    if (irEnabled) {
+        irrecv.disableIRIn();
+        irEnabled = false;
+    }
 
     mqttSetup();
 
