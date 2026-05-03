@@ -146,15 +146,16 @@ static void handleFinish() {
         return;
     }
 
-    bool nvsOk = true;
-    nvsOk &= prefs.putString("ssid",       ssid)                              > 0;
-    nvsOk &= prefs.putString("pass",       pass)                              > 0;
-    nvsOk &= prefs.putUChar ("proto",      (uint8_t)detectedProtocol);
-    nvsOk &= prefs.putUShort("bits",       detectedBits);
-    nvsOk &= prefs.putString("mqtt_host",  mqttHost)                          > 0;
-    nvsOk &= prefs.putUShort("mqtt_port",  (uint16_t)constrain(mqttPort, 1, 65535));
-    nvsOk &= prefs.putString("mqtt_id",    mqttId.length() > 0 ? mqttId : "aircon") > 0;
-    nvsOk &= prefs.putBool  ("provisioned", true);
+    prefs.putString("ssid",       ssid);
+    prefs.putString("pass",       pass);           // may be empty (open network)
+    prefs.putUChar ("proto",      (uint8_t)detectedProtocol);
+    prefs.putUShort("bits",       detectedBits);
+    prefs.putString("mqtt_host",  mqttHost);       // may be empty (MQTT disabled)
+    prefs.putUShort("mqtt_port",  (uint16_t)constrain(mqttPort, 1, 65535));
+    prefs.putString("mqtt_id",    mqttId.length() > 0 ? mqttId : "aircon");
+    prefs.putBool  ("provisioned", true);
+
+    bool nvsOk = prefs.getString("ssid", "") == ssid;
 
     if (!nvsOk) {
         server.send(500, "application/json", "{\"ok\":false,\"error\":\"storage error\"}");
