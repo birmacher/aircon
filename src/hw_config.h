@@ -20,7 +20,6 @@
 #define SHT31_I2C_ADDR  0x44
 
 // =================== CONFIG ===================
-#define AP_PASSWORD             "configme123"
 #define WIFI_CONNECT_TIMEOUT_MS 20000
 #define RECONFIG_HOLD_MS        3000
 #define FACTORY_RESET_HOLD_MS   10000

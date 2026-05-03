@@ -177,7 +177,8 @@ void enterSetupMode(bool clearCreds) {
     WiFi.disconnect(true);
     delay(100);
     WiFi.mode(WIFI_AP);
-    WiFi.softAP(apSsid, AP_PASSWORD);
+    WiFi.setTxPower(WIFI_POWER_8_5dBm);  // C3 SuperMini power supply can't drive default TX power
+    WiFi.softAP(apSsid, NULL, 0, false, 4);
     IPAddress ip = WiFi.softAPIP();
     Serial.printf("AP: %s, IP: %s\n", apSsid, ip.toString().c_str());
 
