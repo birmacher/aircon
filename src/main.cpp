@@ -14,7 +14,10 @@ void setup() {
     
     pinMode(BUTTON_PIN, INPUT_PULLUP);
     
-    // Display init
+    // Display init — delay lets the C3 SuperMini LDO stabilise after the
+    // USB-CDC re-enumeration that follows each upload reset.
+    Wire.end();
+    delay(150);
     Wire.begin(I2C_SDA, I2C_SCL);
     displayReady = display.begin(SSD1306_SWITCHCAPVCC, OLED_I2C_ADDR);
     if (displayReady) {

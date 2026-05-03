@@ -60,6 +60,8 @@ void enterNormalMode() {
 
     mqttSetup();
 
+    // Reinit display: WiFi power draw can reset the SSD1306 charge pump
+    displayReady = display.begin(SSD1306_SWITCHCAPVCC, OLED_I2C_ADDR);
     displayStatus("Ready", WiFi.localIP().toString());
 }
 
