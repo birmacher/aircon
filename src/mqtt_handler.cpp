@@ -81,6 +81,7 @@ static void onMqttMessage(char* topic, byte* payload, unsigned int length) {
     buildTopic(tempTopic, sizeof(tempTopic), "set/temp");
 
     if (strcmp(topic, modeTopic) == 0) {
+        Serial.printf("MQTT cmd: mode=%s\n", val.c_str());
         if (val == "off") {
             acState.power = false;
         } else {
@@ -95,10 +96,13 @@ static void onMqttMessage(char* topic, byte* payload, unsigned int length) {
         publishState();
     } else if (strcmp(topic, tempTopic) == 0) {
         float newTemp = val.toFloat();
+        Serial.printf("MQTT cmd: temp=%s\n", val.c_str());
         if (newTemp >= 16.0f && newTemp <= 30.0f) {
             acState.temp = newTemp;
             if (acState.power) sendACCommand();
             publishState();
+        } else {
+            Serial.printf("MQTT cmd: temp out of range, ignored\n");
         }
     }
 }
