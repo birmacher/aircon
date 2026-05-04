@@ -32,7 +32,7 @@ Get the prototype working end-to-end before changing anything physical.
 - [x] Learned AC code persisted in NVS
 - [x] Minimal HA integration (WiFi + MQTT is fine here — throwaway)
 
-**Done when:** a HA command turns the AC on/off and changes its state.
+- [x] **Done when:** a HA command turns the AC on/off and changes its state.
 
 ### B — Port to ESP32-C6-WROOM-1 DevKitC-1 (USB only)
 
