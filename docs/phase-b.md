@@ -30,7 +30,7 @@ This is the correct board. Concrete reasons tied to roadmap constraints:
 1. **PlatformIO official platform lags Arduino-ESP32 Core 3.0.** The official `platformio/platform-espressif32` has been slow on Core 3.0 (which is what enables C6). Use the community fork **pioarduino** (`https://github.com/pioarduino/platform-espressif32`) — it tracks Arduino-ESP32 3.0.x + ESP-IDF 5.x and has working `esp32-c6-devkitc-1` board support. Pin to a numbered release tag (e.g. `#55.03.38-1`); the repo has no `#stable` branch and `#develop` is unstable.
 2. **IRremoteESP8266 v2.8.6 (currently pinned) does not compile on Arduino-ESP32 Core 3.x** because the Timer/RMT APIs changed. Fixed in **v2.9.0** (released 2026-01-02; changelog: "Esp32 Core version 3 support (#2144)"). We need to bump the lib pin.
 3. **Strapping pin clash on I²C.** Current pins: `I2C_SDA=GPIO8`, `I2C_SCL=GPIO9` (`src/hw_config.h`). On C6, **GPIO8 and GPIO9 are strapping pins** that select boot mode. I²C's open-drain transients can cause boot-mode glitches. Remap to non-strapping GPIOs. Full C6 strap list for reference: GPIO4 (MTMS, SDIO sample edge), GPIO5 (MTDI, SDIO drive edge), GPIO8 (boot mode), GPIO9 (boot mode), GPIO15 (JTAG signal source). GPIO4/5 are SDIO-edge straps only — safe for IR I/O since this design uses no SDIO peripheral. GPIO15 must not float; we don't use it.
-4. **USB CDC flags differ.** Current build flags `-DARDUINO_USB_MODE=1 -DARDUINO_USB_CDC_ON_BOOT=1` (`platformio.ini`) are USB-OTG-specific (S2/S3) and **must both be dropped on C6**. With `ARDUINO_USB_CDC_ON_BOOT=1` set, `HardwareSerial.h` redefines `Serial` as `USBSerial` (the USB-OTG CDC class), which doesn't exist on C6 — build fails with `'USBSerial' was not declared in this scope`. C6 routes `Serial` to USB-Serial-JTAG by default with no flags.
+4. **USB CDC flags must both be kept on C6.** `ARDUINO_USB_MODE=1` selects the **HWCDC** (USB-Serial-JTAG) path — counter-intuitively it is the *inverse* of USB-OTG mode (`USB_MODE=0`). `ARDUINO_USB_CDC_ON_BOOT=1` then routes Arduino `Serial` to the USB-Serial-JTAG device. With `CDC_ON_BOOT=1` alone (no `USB_MODE=1`), the core takes a USBSerial (OTG) branch that doesn't exist on C6 — build fails with `'USBSerial' was not declared in this scope`. With *neither* flag, the build succeeds but Arduino `Serial.println` writes go to UART0 (GPIO16/17) instead of USB-Serial-JTAG — half the output gets lost over USB. Same flag pair as the C3 SuperMini env.
 5. **Partition table is sized to exactly 4 MB** (`partitions.csv`). On the N8 board we should grow `app0`/`app1` (e.g., 2.5–3 MB each) and SPIFFS to use the available 8 MB. Optional for Phase B (current layout works), required by Phase C/F.
 6. **Cost / availability** — DevKitC-1-N8 is ~$10–15 vs ~$5 for the C3 SuperMini. Hestore (Hungary) listed in the roadmap; Mouser/DigiKey/AliExpress also stock it.
 
@@ -50,8 +50,8 @@ monitor_speed = 115200
 lib_deps = ${common.lib_deps}                ; shared with C3 env via [common]
 build_flags =
     -DCORE_DEBUG_LEVEL=3
-    ; Both ARDUINO_USB_MODE and ARDUINO_USB_CDC_ON_BOOT are dropped on C6 (USB-OTG flags).
-    ; With CDC_ON_BOOT=1, HardwareSerial.h aliases Serial → USBSerial (an OTG-only class) and the build fails.
+    -DARDUINO_USB_MODE=1            ; HWCDC (USB-Serial-JTAG), not OTG
+    -DARDUINO_USB_CDC_ON_BOOT=1     ; route Serial to USB-Serial-JTAG
 ```
 
 Also bump the C3 env's `IRremoteESP8266` pin to `^2.9.0` so both envs use the same library; factor `lib_deps` into a `[common]` section to keep them in sync.
