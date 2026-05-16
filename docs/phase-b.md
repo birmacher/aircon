@@ -23,13 +23,14 @@ This is the correct board. Concrete reasons tied to roadmap constraints:
 - **ESP32-H2** — 802.15.4 + BLE only, **no Wi-Fi**. The captive-portal commissioning and any Wi-Fi OTA path become impossible. The roadmap explicitly allows Wi-Fi at commissioning, so H2 over-constrains us.
 - **ESP32-C5** — Wi-Fi 6 dual-band (2.4/5 GHz) + 802.15.4. Newer, less mature ecosystem, no benefit for an IR blaster on 2.4 GHz mesh.
 - **Third-party C6 boards** (Seeed XIAO ESP32-C6, etc.) — use MINI module, smaller form factor but again non-WROOM-1.
+- **Waveshare ESP32-C6-Zero** — bare ESP32-C6FH4/FH8 SiP chip with castellated pads. Two disqualifiers: (a) not a WROOM-1 module, fails reuse rule; (b) **GPIO10 and GPIO11 are not bonded out on the SiP-flash variants** (Waveshare wiki), so the proposed BTN1/BTN2 pin map cannot be used. SiP package also can't drop onto a WROOM-1-based PCB. Useful only as a secondary toy.
 
 ## Drawbacks of going with C6 (and how we handle each)
 
-1. **PlatformIO official platform lags Arduino-ESP32 Core 3.0.** The official `platformio/platform-espressif32` has been slow on Core 3.0 (which is what enables C6). Use the community fork **pioarduino** (`https://github.com/pioarduino/platform-espressif32`) — it tracks Arduino-ESP32 3.0.x + ESP-IDF 5.1.4 and has working `esp32-c6-devkitc-1` board support.
-2. **IRremoteESP8266 v2.8.6 (currently pinned) does not compile on Arduino-ESP32 Core 3.x** because the Timer/RMT APIs changed. Fixed in **v2.9.0** (released 2026-01-03; changelog: "Esp32 Core version 3 support (#2144)"). We need to bump the lib pin.
-3. **Strapping pin clash on I²C.** Current pins: `I2C_SDA=GPIO8`, `I2C_SCL=GPIO9` (`src/hw_config.h`). On C6, **GPIO8 and GPIO9 are strapping pins** that select boot mode. I²C's open-drain transients can cause boot-mode glitches. Remap to non-strapping GPIOs.
-4. **USB CDC flags differ.** Current build flags `-DARDUINO_USB_MODE=1 -DARDUINO_USB_CDC_ON_BOOT=1` (`platformio.ini`) need re-evaluation for C6's built-in USB-Serial-JTAG. Likely keep `CDC_ON_BOOT=1`, drop or adjust `USB_MODE`.
+1. **PlatformIO official platform lags Arduino-ESP32 Core 3.0.** The official `platformio/platform-espressif32` has been slow on Core 3.0 (which is what enables C6). Use the community fork **pioarduino** (`https://github.com/pioarduino/platform-espressif32`) — it tracks Arduino-ESP32 3.0.x + ESP-IDF 5.x and has working `esp32-c6-devkitc-1` board support. Pin to a numbered release tag (e.g. `#55.03.38-1`); the repo has no `#stable` branch and `#develop` is unstable.
+2. **IRremoteESP8266 v2.8.6 (currently pinned) does not compile on Arduino-ESP32 Core 3.x** because the Timer/RMT APIs changed. Fixed in **v2.9.0** (released 2026-01-02; changelog: "Esp32 Core version 3 support (#2144)"). We need to bump the lib pin.
+3. **Strapping pin clash on I²C.** Current pins: `I2C_SDA=GPIO8`, `I2C_SCL=GPIO9` (`src/hw_config.h`). On C6, **GPIO8 and GPIO9 are strapping pins** that select boot mode. I²C's open-drain transients can cause boot-mode glitches. Remap to non-strapping GPIOs. Full C6 strap list for reference: GPIO4 (MTMS, SDIO sample edge), GPIO5 (MTDI, SDIO drive edge), GPIO8 (boot mode), GPIO9 (boot mode), GPIO15 (JTAG signal source). GPIO4/5 are SDIO-edge straps only — safe for IR I/O since this design uses no SDIO peripheral. GPIO15 must not float; we don't use it.
+4. **USB CDC flags must both be kept on C6.** `ARDUINO_USB_MODE=1` selects the **HWCDC** (USB-Serial-JTAG) path — counter-intuitively it is the *inverse* of USB-OTG mode (`USB_MODE=0`). `ARDUINO_USB_CDC_ON_BOOT=1` then routes Arduino `Serial` to the USB-Serial-JTAG device. With `CDC_ON_BOOT=1` alone (no `USB_MODE=1`), the core takes a USBSerial (OTG) branch that doesn't exist on C6 — build fails with `'USBSerial' was not declared in this scope`. With *neither* flag, the build succeeds but Arduino `Serial.println` writes go to UART0 (GPIO16/17) instead of USB-Serial-JTAG — half the output gets lost over USB. Same flag pair as the C3 SuperMini env.
 5. **Partition table is sized to exactly 4 MB** (`partitions.csv`). On the N8 board we should grow `app0`/`app1` (e.g., 2.5–3 MB each) and SPIFFS to use the available 8 MB. Optional for Phase B (current layout works), required by Phase C/F.
 6. **Cost / availability** — DevKitC-1-N8 is ~$10–15 vs ~$5 for the C3 SuperMini. Hestore (Hungary) listed in the roadmap; Mouser/DigiKey/AliExpress also stock it.
 
@@ -41,24 +42,21 @@ Keep the C3 env around during the transition. Add an env using the pioarduino fo
 
 ```ini
 [env:esp32-c6-devkitc-1]
-platform = https://github.com/pioarduino/platform-espressif32.git#develop
+platform = https://github.com/pioarduino/platform-espressif32.git#55.03.38-1
 board = esp32-c6-devkitc-1
 framework = arduino
 board_build.partitions = partitions.csv      ; or partitions_8mb.csv after grow
 monitor_speed = 115200
-lib_deps =
-    crankyoldgit/IRremoteESP8266@^2.9.0      ; bumped from 2.8.6
-    bblanchon/ArduinoJson@^7.0.4
-    adafruit/Adafruit SSD1306@^2.5.10
-    adafruit/Adafruit GFX Library@^1.11.9
-    adafruit/Adafruit SHT31 Library@^2.2.2
-    knolleary/PubSubClient@^2.8
+lib_deps = ${common.lib_deps}                ; shared with C3 env via [common]
 build_flags =
     -DCORE_DEBUG_LEVEL=3
-    -DARDUINO_USB_CDC_ON_BOOT=1
+    -DARDUINO_USB_MODE=1            ; HWCDC (USB-Serial-JTAG), not OTG
+    -DARDUINO_USB_CDC_ON_BOOT=1     ; route Serial to USB-Serial-JTAG
 ```
 
-Also bump the C3 env's `IRremoteESP8266` pin to `^2.9.0` so both envs use the same library.
+Also bump the C3 env's `IRremoteESP8266` pin to `^2.9.0` so both envs use the same library; factor `lib_deps` into a `[common]` section to keep them in sync.
+
+Verified: both envs build clean. C3: 78.3% flash. C6: 80.6% flash, RAM 14.1% (Wi-Fi 6 stack adds ~36 KB over C3).
 
 ### 2. `src/hw_config.h` — remap pins for C6
 
@@ -71,8 +69,10 @@ Strapping-safe remap (verify against the DevKitC-1 silkscreen + C6 datasheet IO_
 | `BTN1_PIN` | GPIO5 | GPIO10 | non-strap, no flash conflict |
 | `BTN2_PIN` | GPIO4 | GPIO11 | non-strap |
 | `BTN3_PIN` | GPIO3 | GPIO22 | non-strap |
-| `I2C_SDA` | GPIO8 | GPIO19 | **avoid GPIO8 strap** |
-| `I2C_SCL` | GPIO9 | GPIO20 | **avoid GPIO9 strap** |
+| `I2C_SDA` | GPIO8 | GPIO6 | **avoid GPIO8 strap**; GPIO19 rejected (esp-idf #11975: SDIO_CLK default mux couples GPIO19↔20 at boot) |
+| `I2C_SCL` | GPIO9 | GPIO7 | **avoid GPIO9 strap**; same reason as SDA |
+
+GPIO12 and GPIO13 are reserved on C6 — they are hard-wired to USB-Serial-JTAG (D−/D+) and are not GPIO-matrix routable. Mark them as reserved in `hw_config.h` so future remaps don't clobber USB.
 
 ### 3. `partitions.csv` — optional grow to 8 MB
 
@@ -80,7 +80,7 @@ Defer until needed. Phase B replicates Phase A behavior; the existing 4 MB layou
 
 ### 4. `src/main.cpp` — power-up delay
 
-The C3-SuperMini-specific LDO-stabilization delay near the top of `setup()` is harmless on C6 (a small `delay()`) — keep it or guard it with `#ifdef ARDUINO_ESP32C3_DEV`.
+The C3-SuperMini-specific LDO-stabilization delay near the top of `setup()` is harmless on C6 (a small `delay()`) — keep it or guard it with `#if CONFIG_IDF_TARGET_ESP32C3`. Do **not** use `#ifdef ARDUINO_ESP32C3_DEV`: that macro is board-variant-specific in arduino-esp32 and is not stable across cores. `CONFIG_IDF_TARGET_ESP32C3` is defined by the IDF target selection and works under both Arduino and ESP-IDF builds.
 
 ### Files that should NOT need changes
 
